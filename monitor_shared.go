@@ -40,6 +40,7 @@ type defaultInterfaceMonitor struct {
 	underNetworkExtension bool
 	defaultInterface      atomic.Pointer[control.Interface]
 	androidVPNEnabled     bool
+	checkAccess           sync.Mutex
 	noRoute               bool
 	networkMonitor        NetworkUpdateMonitor
 	logger                logger.Logger
@@ -67,6 +68,8 @@ func (m *defaultInterfaceMonitor) Start() error {
 }
 
 func (m *defaultInterfaceMonitor) delayCheckUpdate() {
+	m.access.Lock()
+	defer m.access.Unlock()
 	if m.checkUpdateTimer == nil {
 		m.checkUpdateTimer = time.AfterFunc(time.Second, m.postCheckUpdate)
 	} else {
@@ -75,6 +78,8 @@ func (m *defaultInterfaceMonitor) delayCheckUpdate() {
 }
 
 func (m *defaultInterfaceMonitor) postCheckUpdate() {
+	m.checkAccess.Lock()
+	defer m.checkAccess.Unlock()
 	err := m.interfaceFinder.Update()
 	if err != nil {
 		m.logger.Error("update interface: ", err)
